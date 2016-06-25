@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vertx.version>3.3.0</vertx.version>
+        <vertx.version>3.3.0.CR2</vertx.version>
     </properties>
 
     <repositories>
@@ -29,6 +29,21 @@
             <artifactId>vertx-core</artifactId>
             <version>${vertx.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-service-proxy</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-rx-java</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
 
         <!--Test dependencies-->
         <dependency>
@@ -37,7 +52,12 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-unit</artifactId>
+            <version>3.3.0.CR2</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 

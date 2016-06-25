@@ -1,5 +1,6 @@
 package sk.mimacom.techsession.vertx;
 
+import io.vertx.core.json.JsonObject;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
 import sk.mimacom.techsession.vertx.dto.ErrorDTO;
 import sk.mimacom.techsession.vertx.dto.game.GameCommandDTO;
@@ -7,8 +8,6 @@ import sk.mimacom.techsession.vertx.dto.game.GameStateDTO;
 import sk.mimacom.techsession.vertx.dto.lobby.AddPlayerDTO;
 import sk.mimacom.techsession.vertx.dto.lobby.GameEndedDTO;
 import sk.mimacom.techsession.vertx.entity.Player;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonObject;
 
 import java.util.stream.IntStream;
 
@@ -86,7 +85,7 @@ public class GameVerticle extends PongVerticle {
             command.setCommand("win" + (winning + 1));
             vertx.cancelTimer(timerID);
             vertx.eventBus().publish(publicAddress, command);
-            vertx.eventBus().send(GameLobbyVerticle.QUEUE_LOBBY_PRIVATE, new GameEndedDTO(guid));
+            vertx.eventBus().send(GameLobbyVerticleImpl.QUEUE_LOBBY_PRIVATE, new GameEndedDTO(guid));
         }
     }
 
@@ -134,7 +133,7 @@ public class GameVerticle extends PongVerticle {
     private JsonObject movePlayer(JsonObject message) {
         Player player = null;
         String guid = message.getString("guid");
-        for (Player p: players) {
+        for (Player p : players) {
             if (p != null && p.getGuid().equalsIgnoreCase(guid)) {
                 player = p;
             }
@@ -259,9 +258,11 @@ public class GameVerticle extends PongVerticle {
         public static String getPublicQueueAddressForGame(String guid) {
             return QUEUE_PUBLIC_PREFIX + guid;
         }
+
         public static String getPrivateQueueAddressForGame(String guid) {
             return QUEUE_PRIVATE_PREFIX + guid;
         }
+
         public static String getInputQueueAddressForGame(String guid) {
             return QUEUE_INPUT_PREFIX + guid;
         }

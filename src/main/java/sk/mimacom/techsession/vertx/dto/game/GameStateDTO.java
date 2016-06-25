@@ -1,9 +1,6 @@
 package sk.mimacom.techsession.vertx.dto.game;
 
-/**
- * Created by bol on 12. 12. 2014.
- */
-public class GameStateDTO extends GameDTO{
+public class GameStateDTO extends GameDTO {
 
     public GameStateDTO() {
         setBallPosition(0, 0);
@@ -19,23 +16,23 @@ public class GameStateDTO extends GameDTO{
     }
 
     public void setPlayer1position(int y) {
-        putNumber("player1pos", y);
+        put("player1pos", y);
     }
 
     public void setPlayer2position(int y) {
-        putNumber("player2pos", y);
+        put("player2pos", y);
     }
 
     public void setPlayer1score(int score) {
-        putNumber("player1score", score);
+        put("player1score", score);
     }
 
     public void setPlayer2score(int score) {
-        putNumber("player2score", score);
+        put("player2score", score);
     }
 
     public void setBallPosition(int x, int y) {
-        putNumber("ballx", x);
-        putNumber("bally", y);
+        put("ballx", x);
+        put("bally", y);
     }
 }

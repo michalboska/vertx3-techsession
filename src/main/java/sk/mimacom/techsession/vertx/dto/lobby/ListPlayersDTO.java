@@ -1,15 +1,14 @@
 package sk.mimacom.techsession.vertx.dto.lobby;
 
+import io.vertx.core.json.JsonArray;
 import sk.mimacom.techsession.vertx.dto.PongDTO;
-import org.vertx.java.core.json.JsonArray;
 
-/**
- * Created by Michal on 6. 12. 2014.
- */
+import java.util.Arrays;
+
 public class ListPlayersDTO extends PongDTO {
 
     public ListPlayersDTO(String[] playerNames) {
-        putArray("players", new JsonArray(playerNames));
+        put("players", new JsonArray(Arrays.asList(playerNames)));
         setStatusOk();
     }
 

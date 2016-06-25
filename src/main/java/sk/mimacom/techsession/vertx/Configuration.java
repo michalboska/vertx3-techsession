@@ -1,30 +1,27 @@
 package sk.mimacom.techsession.vertx;
 
 
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.platform.Container;
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Created by Michal Boska on 4. 12. 2014.
- */
 public final class Configuration {
     private static final Pattern OPTION_NESTED_PATTERN = Pattern.compile("(.+?)\\.(.*)");
 
-    public static String getString(String key, Container remoteContainer) {
-        return (String) getOptionRecursive(key, remoteContainer.config(), JsonObject::getString);
+    public static String getString(String key, Context context) {
+        return (String) getOptionRecursive(key, context.config(), JsonObject::getString);
     }
 
-    public static Integer getInteger(String key, Container remoteContainer) {
+    public static Integer getInteger(String key, Context remoteContainer) {
         return (Integer) getOptionRecursive(key, remoteContainer.config(), JsonObject::getInteger);
     }
 
-    public static JsonArray getArray(String key, Container remoteContainer) {
-        return (JsonArray) getOptionRecursive(key, remoteContainer.config(), JsonObject::getArray);
+    public static JsonArray getArray(String key, Context context) {
+        return (JsonArray) getOptionRecursive(key, context.config(), JsonObject::getJsonArray);
     }
 
     public static String getMandatoryString(String key, JsonObject jsonObject) {
@@ -43,7 +40,7 @@ public final class Configuration {
             }
             String immediateKey = matcher.group(1);
             String followingKeys = matcher.group(2);
-            JsonObject nestedObject = jsonObject.getObject(immediateKey);
+            JsonObject nestedObject = jsonObject.getJsonObject(immediateKey);
             if (nestedObject == null) {
                 throw new IllegalArgumentException("Nested JSON object " + key + " not found");
             }
@@ -52,7 +49,7 @@ public final class Configuration {
     }
 
     private static void checkKeyExists(String key, JsonObject jsonObject) {
-        if (!jsonObject.containsField(key)) {
+        if (!jsonObject.containsKey(key)) {
             throw new IllegalArgumentException("Key " + key + " does not exist in this JSON object");
         }
     }

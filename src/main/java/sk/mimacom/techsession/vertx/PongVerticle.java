@@ -1,18 +1,15 @@
 package sk.mimacom.techsession.vertx;
 
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
 import sk.mimacom.techsession.vertx.dto.ErrorDTO;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.platform.Verticle;
 
 import java.util.function.Function;
 
-/**
- * Created by Michal on 6. 12. 2014.
- */
-public abstract class PongVerticle extends Verticle {
+public abstract class PongVerticle extends AbstractVerticle {
 
     protected Handler<Message<JsonObject>> createHandler(Function<Message<JsonObject>, JsonObject> handlerFunction) {
         return msg -> {
