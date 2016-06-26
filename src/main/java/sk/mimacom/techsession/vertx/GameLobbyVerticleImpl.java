@@ -1,15 +1,20 @@
 package sk.mimacom.techsession.vertx;
 
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.impl.StringEscapeUtils;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.rx.java.ObservableFuture;
+import io.vertx.rx.java.RxHelper;
+import io.vertx.rxjava.core.eventbus.Message;
+import rx.Observable;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
 import sk.mimacom.techsession.vertx.dto.ErrorDTO;
 import sk.mimacom.techsession.vertx.dto.lobby.*;
 import sk.mimacom.techsession.vertx.entity.Entity;
 import sk.mimacom.techsession.vertx.entity.Game;
 import sk.mimacom.techsession.vertx.entity.Player;
-import org.apache.commons.lang3.StringEscapeUtils;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,13 +35,15 @@ public class GameLobbyVerticleImpl extends PongVerticle {
     private Map<String, String> deploymentIDs = new HashMap<>();
 
     private Game joinableGame;
-
+    private Logger logger = LoggerFactory.getLogger(GameLobbyVerticleImpl.class);
 
     @Override
-    public void start() {
-        vertx.eventBus().registerHandler(QUEUE_LOBBY, createHandler(this::handleMessage));
-        vertx.eventBus().registerHandler(QUEUE_LOBBY_PRIVATE, createHandler(this::handlePrivateMessage));
-        vertx.eventBus().registerHandler(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketMessage));
+    public void start() throws Exception {
+        vertx.eventBus().consumer(QUEUE_LOBBY, createHandler(this::handleMessage));
+
+        //TODO
+//        vertx.eventBus().registerHandler(QUEUE_LOBBY_PRIVATE, createHandler(this::handlePrivateMessage));
+//        vertx.eventBus().registerHandler(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketMessage));
     }
 
     private JsonObject handleMessage(Message<JsonObject> message) {
@@ -44,28 +51,28 @@ public class GameLobbyVerticleImpl extends PongVerticle {
         JsonObject body = message.body();
         switch (body.getString("type")) {
             case "addPlayer":
-                container.logger().info("Adding a new player");
+                logger.info("Adding a new player");
                 result = addPlayer(body);
                 break;
             case "addGame":
-                container.logger().info("Creating a new game");
+                logger.info("Creating a new game");
                 result = addGame(message);
                 break;
             case "joinGame":
-                container.logger().info("Joining an existing game");
+                logger.info("Joining an existing game");
                 result = joinGame(message);
                 break;
             case "getAvailableGame":
-                container.logger().info("Getting available game");
+                logger.info("Getting available game");
                 result = getAvailableGame();
                 break;
             case "listPlayers":
-                container.logger().info("Listing players");
+                logger.info("Listing players");
                 result = listPlayers();
                 break;
         }
         if (result != null && ErrorDTO.isError(result)) {
-            container.logger().error(result.getString("error"));
+            logger.error(result.getString("error"));
         }
         return result;
     }
@@ -95,7 +102,8 @@ public class GameLobbyVerticleImpl extends PongVerticle {
         if (exists) {
             return new ErrorDTO("Player name already exists");
         }
-        Player player = new Player(StringEscapeUtils.escapeHtml4(name), Entity.generateGUID());
+        Player player;
+        player = new Player(escapeString(name), Entity.generateGUID());
         activePlayers.put(player.getGuid(), player);
         activePlayersByName.put(player.getName(), player);
         return new AddPlayerDTO(player.getGuid());
@@ -114,22 +122,24 @@ public class GameLobbyVerticleImpl extends PongVerticle {
             return new ErrorDTO(ERROR_NO_SUCH_PLAYER);
         }
         String guid = Entity.generateGUID();
-        Game game = new Game(StringEscapeUtils.escapeHtml4(name), guid, player);
+        Game game = new Game(escapeString(name), guid, player);
         activeGames.put(guid, game);
         activeGamesByName.put(name, game);
         //deploy and configure a new game verticle
         JsonObject config = new JsonObject();
-        config.putString(GameVerticle.Constants.CONFIG_GAME_GUID, guid);
-        config.putString(GameVerticle.Constants.CONFIG_PLAYER_GUID, playerGuid);
-        config.putString(GameVerticle.Constants.CONFIG_PLAYER_NAME, player.getName());
-        container.deployVerticle(GameVerticle.class.getName(), config, result -> {
-            if (result.succeeded()) {
-                deploymentIDs.put(guid, result.result());
-                container.logger().info(String.format("Deployed a new verticle for game %s with deployment ID: %s", guid, result.result()));
-                message.reply(new AddGameDTO(guid));
-            } else {
-                message.reply(new ErrorDTO(result.cause()));
-            }
+        config.put(GameVerticleImpl.Constants.CONFIG_GAME_GUID, guid);
+        config.put(GameVerticleImpl.Constants.CONFIG_PLAYER_GUID, playerGuid);
+        config.put(GameVerticleImpl.Constants.CONFIG_PLAYER_NAME, player.getName());
+
+        ObservableFuture<String> deployGameVerticleFuture = RxHelper.observableFuture();
+        DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(config);
+        vertx.deployVerticle(GameVerticleImpl.class.getName(), deploymentOptions, deployGameVerticleFuture.toHandler());
+        deployGameVerticleFuture.subscribe(deploymentId -> {
+            deploymentIDs.put(guid, deploymentId);
+            logger.info(String.format("Deployed a new verticle for game %s with deployment ID: %s", guid, deploymentId));
+            message.reply(new AddGameDTO(guid));
+        }, throwable -> {
+            message.reply(new ErrorDTO(throwable));
         });
         joinableGame = game;
         return AsyncHandlerDTO.getInstance();
@@ -152,19 +162,22 @@ public class GameLobbyVerticleImpl extends PongVerticle {
         }
         game.addSecondPlayer(player);
         //send message to existing verticle that new player has joined
-        String address = GameVerticle.Constants.getPrivateQueueAddressForGame(gameGuid);
+        String address = GameVerticleImpl.Constants.getPrivateQueueAddressForGame(gameGuid);
         JsonObject joinMessage = new JsonObject();
-        joinMessage.putString("type", GameVerticle.Constants.ACTION_ADD_PLAYER);
-        joinMessage.putString(GameVerticle.Constants.CONFIG_PLAYER_GUID, playerGuid);
-        joinMessage.putString(GameVerticle.Constants.CONFIG_PLAYER_NAME, player.getName());
-        vertx.eventBus().send(address, joinMessage, (Handler<Message<JsonObject>>) objReply -> {
-            JsonObject reply = objReply.body();
+        joinMessage.put("type", GameVerticleImpl.Constants.ACTION_ADD_PLAYER);
+        joinMessage.put(GameVerticleImpl.Constants.CONFIG_PLAYER_GUID, playerGuid);
+        joinMessage.put(GameVerticleImpl.Constants.CONFIG_PLAYER_NAME, player.getName());
+        Observable<Message<JsonObject>> replyObservable = vertx.eventBus().sendObservable(address, joinMessage);
+        replyObservable.subscribe(replyMessage -> {
+            JsonObject reply = replyMessage.body();
             if (!ErrorDTO.isError(reply)) {
                 joinableGame = null;
                 message.reply(new JoinGameDTO());
             } else {
                 message.reply(reply);
             }
+        }, throwable -> {
+            message.reply(new ErrorDTO(throwable));
         });
         return AsyncHandlerDTO.getInstance();
     }
@@ -181,9 +194,9 @@ public class GameLobbyVerticleImpl extends PongVerticle {
         activeGames.remove(guid);
         String id = deploymentIDs.get(guid);
         if (id != null) {
-            container.logger().info(String.format("Destroying verticle for game %s", guid));
+            logger.info(String.format("Destroying verticle for game %s", guid));
             deploymentIDs.remove(guid);
-            container.undeployVerticle(id);
+            vertx.undeploy(id);
         }
         return AsyncHandlerDTO.getInstance();
     }
@@ -205,6 +218,14 @@ public class GameLobbyVerticleImpl extends PongVerticle {
         }
         activePlayers.remove(playerGuid);
         activePlayersByName.remove(player.getName());
+    }
+
+    private String escapeString(String string) {
+        try {
+            return StringEscapeUtils.escapeJavaScript(string);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

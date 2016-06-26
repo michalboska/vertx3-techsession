@@ -1,17 +1,17 @@
 package sk.mimacom.techsession.vertx;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava.core.AbstractVerticle;
+import io.vertx.rxjava.core.eventbus.Message;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
 import sk.mimacom.techsession.vertx.dto.ErrorDTO;
 
 import java.util.function.Function;
 
-public abstract class PongVerticle extends AbstractVerticle {
+abstract class PongVerticle extends AbstractVerticle {
 
-    protected Handler<Message<JsonObject>> createHandler(Function<Message<JsonObject>, JsonObject> handlerFunction) {
+    Handler<Message<JsonObject>> createHandler(Function<Message<JsonObject>, JsonObject> handlerFunction) {
         return msg -> {
             JsonObject result = handlerFunction.apply(msg);
             if (result == null) {
@@ -24,7 +24,7 @@ public abstract class PongVerticle extends AbstractVerticle {
         };
     }
 
-    protected void unknownHandlerError(Message msg) {
+    private void unknownHandlerError(Message msg) {
         msg.reply(new ErrorDTO("No handler registered for this message type"));
     }
 
