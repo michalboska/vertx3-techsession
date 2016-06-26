@@ -3,12 +3,18 @@ package sk.mimacom.techsession.vertx;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rx.java.ObservableFuture;
 import io.vertx.rx.java.RxHelper;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 public class ConfigVerticle extends AbstractVerticle {
 
@@ -62,4 +68,21 @@ public class ConfigVerticle extends AbstractVerticle {
                 });
     }
 
+    private static JsonObject loadConfigJson() {
+        StringBuilder builder = new StringBuilder();
+        try (InputStream stream = ConfigVerticle.class.getClassLoader().getResourceAsStream("config.json")) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+            reader
+                    .lines()
+                    .forEach(builder::append);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return new JsonObject(builder.toString());
+    }
+
+    public static void main(String[] args) {
+        DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(loadConfigJson());
+        Vertx.vertx().deployVerticle(ConfigVerticle.class.getName(), deploymentOptions);
+    }
 }
