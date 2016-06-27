@@ -5,7 +5,7 @@
   },
   "allowedEndpointsIn": [
     {
-      "address": "ch.erni.beer.vertx.GameLobbyVerticle.queue"
+      "address": "sk.mimacom.techsession.vertx.GameLobbyVerticle.queue"
     },
     {
       "address_re": "Game\\.input-[a-zA-Z0-9\\-]+"

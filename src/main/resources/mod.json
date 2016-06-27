@@ -1,8 +1,0 @@
-{
-
-  // Java verticle
-  "main":"ch.erni.beer.vertx.ConfigVerticle",
-
-
-  "auto-redeploy": true
-}
