@@ -1,5 +1,10 @@
 package sk.mimacom.techsession.vertx;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -11,14 +16,9 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rx.java.ObservableFuture;
 import io.vertx.rx.java.RxHelper;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+public class StartupVerticle extends AbstractVerticle {
 
-public class ConfigVerticle extends AbstractVerticle {
-
-    private Logger logger = LoggerFactory.getLogger(ConfigVerticle.class);
+    private Logger logger = LoggerFactory.getLogger(StartupVerticle.class);
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
@@ -70,7 +70,7 @@ public class ConfigVerticle extends AbstractVerticle {
 
     private static JsonObject loadConfigJson() {
         StringBuilder builder = new StringBuilder();
-        try (InputStream stream = ConfigVerticle.class.getClassLoader().getResourceAsStream("config.json")) {
+        try (InputStream stream = StartupVerticle.class.getClassLoader().getResourceAsStream("config.json")) {
             BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
             reader
                     .lines()
@@ -83,6 +83,6 @@ public class ConfigVerticle extends AbstractVerticle {
 
     public static void main(String[] args) {
         DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(loadConfigJson());
-        Vertx.vertx().deployVerticle(ConfigVerticle.class.getName(), deploymentOptions);
+        Vertx.vertx().deployVerticle(StartupVerticle.class.getName(), deploymentOptions);
     }
 }
