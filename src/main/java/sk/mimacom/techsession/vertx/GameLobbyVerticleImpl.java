@@ -26,8 +26,8 @@ import sk.mimacom.techsession.vertx.entity.Game;
 import sk.mimacom.techsession.vertx.entity.Player;
 
 public class GameLobbyVerticleImpl extends PongVerticle {
-	public static final String QUEUE_LOBBY = "GameLobbyVerticleImpl.queue";
-	public static final String QUEUE_LOBBY_PRIVATE = "GameLobbyVerticleImpl.private-queue";
+	public static final String QUEUE_LOBBY = "GameLobbyVerticle.queue";
+	public static final String QUEUE_LOBBY_PRIVATE = "GameLobbyVerticle.private-queue";
 
 	private static final String ERROR_NO_SUCH_PLAYER = "No such player exists";
 	private static final String ERROR_NO_SUCH_GAME = "No such game exists";

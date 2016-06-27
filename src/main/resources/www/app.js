@@ -123,7 +123,7 @@ var UIModel = function() {
 var Controller = function() {
     const GAME_PUBLIC_QUEUE_PREFIX = "Game.public-";
     const GAME_INPUT_QUEUE_PREFIX = "Game.input-";
-    const LOBBY_QUEUE = "sk.mimacom.techsession.vertx.GameLobbyVerticle.queue";
+    const LOBBY_QUEUE = "GameLobbyVerticle.queue";
     var inputQueue;
     var playerGUID, gameGUID;
     var player1, player2, ball;
@@ -136,7 +136,7 @@ var Controller = function() {
         player1 = model.player1;
         player2 = model.player2;
         ball = model.ball;
-        eb = new vertx.EventBus(document.URL + "eventbus");
+        eb = new vertx.EventBus("/eventbus");
         eb.onopen = function() {
             registerToGame();
         }
