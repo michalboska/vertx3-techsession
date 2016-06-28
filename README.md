@@ -1,7 +1,7 @@
 Mimacom Vert.x 3 Tech Session
 ================
 
-A real-time web minigame demonstrating the use of server-side vert.x (java 8) and client-side Javascript. Used as an example at Mimacom tech session.
+A real-time web minigame demonstrating the use of server-side Java 8 and Vert.x ( http://vertx.io/ ) and client-side Javascript. Used as an example at Mimacom tech session.
 
 The server side consists of more Verticles. Main verticle is ConfigVerticle which initializes other verticles with default config values
 
