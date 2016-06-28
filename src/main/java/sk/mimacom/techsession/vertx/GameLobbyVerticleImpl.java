@@ -54,10 +54,7 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 		vertx.eventBus().consumer(QUEUE_LOBBY, createHandler(this::handleMessage));
 		serviceProxyConsumer = ProxyHelper.registerService(GameLobbyVerticle.class, getVertx(), this, privateQueueAddress);
 
-		//TODO
 		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketMessage));
-//        vertx.eventBus().registerHandler(QUEUE_LOBBY_PRIVATE, createHandler(this::handlePrivateMessage));
-//        vertx.eventBus().registerHandler(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketMessage));
 	}
 
 	private JsonObject handleMessage(Message<JsonObject> message) {
