@@ -1,5 +1,7 @@
 package sk.mimacom.techsession.vertx;
 
+import org.apache.commons.lang3.Validate;
+
 import java.util.stream.IntStream;
 
 import io.vertx.core.AsyncResult;
@@ -39,18 +41,16 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 
 	public GameVerticleImpl(String gameGuid, String firstPlayerGuid, String firstPlayerName) {
 		this.gameGuid = gameGuid;
-		players[0] = new Player(firstPlayerGuid, firstPlayerName);
+		players[0] = new Player(Validate.notNull(firstPlayerName), Validate.notNull(firstPlayerGuid));
 		publicAddress = Constants.getPublicQueueAddressForGame(gameGuid);
 		privateAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
 		inputAddress = Constants.getInputQueueAddressForGame(gameGuid);
-		logger.info(String.format("Created GameVerticleImpl instance with guid %s", gameGuid));
 	}
 
 	@Override
 	public void start() {
 		String privateQueueAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
 		ProxyHelper.registerService(GameVerticle.class, getVertx(), this, privateQueueAddress);
-		logger.info(String.format("Registered GameVerticleImpl instance on address %s", privateQueueAddress));
 		gameLobbyVerticle = GameLobbyVerticle.createProxy(getVertx(), StartupVerticle.EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
 		vertx.eventBus().consumer(inputAddress, createHandler(this::handleInputMessages));
 
