@@ -51,7 +51,7 @@ public class HTTPServerVerticle extends AbstractVerticle {
 		router.routeWithRegex(HttpMethod.GET, "/(.*)").handler(this::handleHttpGet);
 		httpServer.requestHandler(router::accept);
 
-		httpServer.listen(Configuration.getInteger(CONFIG_PORT, context), Configuration.getString(CONFIG_ADDRESS, context));
+		httpServer.listen(JsonParser.getInteger(CONFIG_PORT, context), JsonParser.getString(CONFIG_ADDRESS, context));
 	}
 
 	private void setupSockjsBridge(SockJSHandler sockJSHandler) {
@@ -65,8 +65,8 @@ public class HTTPServerVerticle extends AbstractVerticle {
 							.setAddressRegex(jsonObject.getString("address_re"));
 				})
 				.collect(Collectors.toList());
-		JsonArray allowedIn = Configuration.getArray(CONFIG_ALLOWED_ENDPOINTS_IN, context);
-		JsonArray allowedOut = Configuration.getArray(CONFIG_ALLOWED_ENDPOINTS_OUT, context);
+		JsonArray allowedIn = JsonParser.getArray(CONFIG_ALLOWED_ENDPOINTS_IN, context);
+		JsonArray allowedOut = JsonParser.getArray(CONFIG_ALLOWED_ENDPOINTS_OUT, context);
 		extractPermittedOptions.apply(allowedIn).forEach(bridgeOptions::addInboundPermitted);
 		extractPermittedOptions.apply(allowedOut).forEach(bridgeOptions::addOutboundPermitted);
 

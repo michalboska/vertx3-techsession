@@ -1,15 +1,15 @@
 package sk.mimacom.techsession.vertx;
 
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class Configuration {
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+
+public final class JsonParser {
     private static final Pattern OPTION_NESTED_PATTERN = Pattern.compile("(.+?)\\.(.*)");
 
     public static String getString(String key, Context context) {

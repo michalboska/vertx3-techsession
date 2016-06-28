@@ -2,24 +2,27 @@ package sk.mimacom.techsession.vertx;
 
 import java.util.stream.IntStream;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.rxjava.core.Future;
 import io.vertx.rxjava.core.eventbus.Message;
+import io.vertx.serviceproxy.ProxyHelper;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
-import sk.mimacom.techsession.vertx.dto.ErrorDTO;
 import sk.mimacom.techsession.vertx.dto.game.GameCommandDTO;
 import sk.mimacom.techsession.vertx.dto.game.GameStateDTO;
-import sk.mimacom.techsession.vertx.dto.lobby.AddPlayerDTO;
-import sk.mimacom.techsession.vertx.dto.lobby.GameEndedDTO;
 import sk.mimacom.techsession.vertx.entity.Player;
 
-public class GameVerticleImpl extends PongVerticle {
+class GameVerticleImpl extends PongVerticle implements GameVerticle {
 
 	private Logger logger = LoggerFactory.getLogger(GameVerticleImpl.class);
 
+	private GameLobbyVerticle gameLobbyVerticle;
+
 	private Player[] players = new Player[2];
-	private String guid, publicAddress, privateAddress, inputAddress;
+	private String gameGuid, publicAddress, privateAddress, inputAddress;
 	private Point ball = new Point(512, 300);
 	private float ballSpeed = 10;
 	private Point ballVector = new Point(-1, -1);
@@ -34,19 +37,24 @@ public class GameVerticleImpl extends PongVerticle {
 	private byte speedCounter = 0;
 	private long gameTimer;
 
+	public GameVerticleImpl(String gameGuid, String firstPlayerGuid, String firstPlayerName) {
+		this.gameGuid = gameGuid;
+		players[0] = new Player(firstPlayerGuid, firstPlayerName);
+		publicAddress = Constants.getPublicQueueAddressForGame(gameGuid);
+		privateAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
+		inputAddress = Constants.getInputQueueAddressForGame(gameGuid);
+		logger.info(String.format("Created GameVerticleImpl instance with guid %s", gameGuid));
+	}
+
 	@Override
 	public void start() {
-		guid = Configuration.getString(Constants.CONFIG_GAME_GUID, context);
-		String playerGuid = Configuration.getString(Constants.CONFIG_PLAYER_GUID, context);
-		String playerName = Configuration.getString(Constants.CONFIG_PLAYER_NAME, context);
-		players[0] = new Player(playerName, playerGuid);
-		publicAddress = Constants.getPublicQueueAddressForGame(guid);
-		privateAddress = Constants.getPrivateQueueAddressForGame(guid);
-		inputAddress = Constants.getInputQueueAddressForGame(guid);
+		String privateQueueAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
+		ProxyHelper.registerService(GameVerticle.class, getVertx(), this, privateQueueAddress);
+		logger.info(String.format("Registered GameVerticleImpl instance on address %s", privateQueueAddress));
+		gameLobbyVerticle = GameLobbyVerticle.createProxy(getVertx(), StartupVerticle.EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
 		vertx.eventBus().consumer(inputAddress, createHandler(this::handleInputMessages));
 
 		//TODO: Service
-		vertx.eventBus().consumer(privateAddress, createHandler(this::handlePrivateMessages));
 		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSockJsMessages));
 //        vertx.eventBus().registerHandler(privateAddress, createHandler(this::handlePrivateMessages));
 //        vertx.eventBus().registerHandler(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSockJsMessages));
@@ -58,17 +66,6 @@ public class GameVerticleImpl extends PongVerticle {
 		switch (body.getString("type")) {
 			case "move":
 				result = movePlayer(body);
-				break;
-		}
-		return result;
-	}
-
-	private JsonObject handlePrivateMessages(Message<JsonObject> message) {
-		JsonObject result = null;
-		JsonObject body = message.body();
-		switch (body.getString("type")) {
-			case Constants.ACTION_ADD_PLAYER:
-				result = addPlayer(body);
 				break;
 		}
 		return result;
@@ -91,7 +88,7 @@ public class GameVerticleImpl extends PongVerticle {
 			command.setCommand("win" + (winning + 1));
 			vertx.cancelTimer(timerID);
 			vertx.eventBus().publish(publicAddress, command);
-			vertx.eventBus().send(GameLobbyVerticleImpl.QUEUE_LOBBY_PRIVATE, new GameEndedDTO(guid));
+			gameLobbyVerticle.onGameEnded(gameGuid);
 		}
 	}
 
@@ -213,7 +210,7 @@ public class GameVerticleImpl extends PongVerticle {
 	}
 
 	private void startGame() {
-		logger.info(String.format("Game %s is starting", guid));
+		logger.info(String.format("Game %s is starting", gameGuid));
 		if (gameTimer != 0) {
 			vertx.cancelTimer(gameTimer);
 		}
@@ -228,15 +225,16 @@ public class GameVerticleImpl extends PongVerticle {
 		gameTimer = vertx.setPeriodic(20, this::gameTick);
 	}
 
-	private JsonObject addPlayer(JsonObject message) {
+	@Override
+	public void addPlayer(String playerGuid, String playerName, Handler<AsyncResult<Void>> handler) {
+		Future<Void> handlerFuture = Future.<Void>future().setHandler(handler);
 		if (players[1] != null) {
-			return new ErrorDTO("Game is full");
+			handlerFuture.fail("Game is full");
+			return;
 		}
-		String playerGuid = Configuration.getMandatoryString(Constants.CONFIG_PLAYER_GUID, message);
-		String playerName = Configuration.getMandatoryString(Constants.CONFIG_PLAYER_NAME, message);
 		players[1] = new Player(playerName, playerGuid);
 		vertx.setTimer(2000, l -> startGame());
-		return new AddPlayerDTO(playerGuid);
+		handlerFuture.complete();
 	}
 
 	private void playerDisconnected(String playerGuid) {
@@ -247,26 +245,26 @@ public class GameVerticleImpl extends PongVerticle {
 		});
 	}
 
-	public static class Constants {
-		public static final String QUEUE_PUBLIC_PREFIX = "Game.public-";
-		public static final String QUEUE_PRIVATE_PREFIX = "Game.private-";
-		public static final String QUEUE_INPUT_PREFIX = "Game.input-";
+	static class Constants {
+		static final String QUEUE_PUBLIC_PREFIX = "Game.public-";
+		static final String QUEUE_PRIVATE_PREFIX = "Game.private-";
+		static final String QUEUE_INPUT_PREFIX = "Game.input-";
 
-		public static final String CONFIG_GAME_GUID = "gameGuid";
-		public static final String CONFIG_PLAYER_GUID = "playerGuid";
-		public static final String CONFIG_PLAYER_NAME = "playerName";
+		static final String CONFIG_GAME_GUID = "gameGuid";
+		static final String CONFIG_PLAYER_GUID = "playerGuid";
+		static final String CONFIG_PLAYER_NAME = "playerName";
 
 		public static final String ACTION_ADD_PLAYER = "addPlayer";
 
-		public static String getPublicQueueAddressForGame(String guid) {
+		static String getPublicQueueAddressForGame(String guid) {
 			return QUEUE_PUBLIC_PREFIX + guid;
 		}
 
-		public static String getPrivateQueueAddressForGame(String guid) {
+		static String getPrivateQueueAddressForGame(String guid) {
 			return QUEUE_PRIVATE_PREFIX + guid;
 		}
 
-		public static String getInputQueueAddressForGame(String guid) {
+		static String getInputQueueAddressForGame(String guid) {
 			return QUEUE_INPUT_PREFIX + guid;
 		}
 	}
