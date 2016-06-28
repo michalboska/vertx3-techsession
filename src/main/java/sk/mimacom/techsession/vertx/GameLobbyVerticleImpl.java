@@ -1,5 +1,6 @@
 package sk.mimacom.techsession.vertx;
 
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -25,7 +26,7 @@ import sk.mimacom.techsession.vertx.entity.Entity;
 import sk.mimacom.techsession.vertx.entity.Game;
 import sk.mimacom.techsession.vertx.entity.Player;
 
-public class GameLobbyVerticleImpl extends PongVerticle {
+public class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 	public static final String QUEUE_LOBBY = "GameLobbyVerticle.queue";
 	public static final String QUEUE_LOBBY_PRIVATE = "GameLobbyVerticle.private-queue";
 
