@@ -30,37 +30,53 @@ public class StartupVerticle extends AbstractVerticle {
 		JsonArray allowedEndpointsIn = JsonParser.getArray("allowedEndpointsIn", context);
 		JsonArray allowedEndpointsOut = JsonParser.getArray("allowedEndpointsOut", context);
 
-		JsonObject configObject = new JsonObject();
-		configObject.put(HTTPServerVerticle.CONFIG_ADDRESS, httpAddress);
-		configObject.put(HTTPServerVerticle.CONFIG_PORT, httpPort);
-		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_IN, allowedEndpointsIn);
-		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_OUT, allowedEndpointsOut);
+		/**
+		 * TODO: Create and deploy instances of HttpServerVerticle that will listen for all incomming HTTP and websocket connections.
+		 * This server will handle some low-level communication specifics and inform other verticles about related events.
+		 *
+		 * First we will initialize configuration JSON object for HttpServerVerticle, using these constants
+		 * 		HTTPServerVerticle.CONFIG_ADDRESS,
+		 		HTTPServerVerticle.CONFIG_PORT,
+		 		HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_IN,
+		 		HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_OUT
+		 constants to pass configuration parameters
+		 */
+
+		/**
+		 * TODO: When this configuration object is created, use vert.x APIs to deploy one {@link HTTPServerVerticle} for each CPU core.
+		 *
+		 * Use reactive (rxJava) APIs to be signalled when the deployment is finished, because we will need to synchronize this with waiting for other deployments
+		 * to signal that our application is successfully started up.
+		 */
+
 
 		logger.info("Starting " + numInstances + " instances of Pong HTTP server at address " + httpAddress + " port:" + httpPort);
 		logger.info("Allowed bridges for inbound eventbus endpoints: " + allowedEndpointsIn.toString());
 		logger.info("Allowed bridges for outbound eventbus endpoints: " + allowedEndpointsOut.toString());
 
-		ObservableFuture<String> deployGameLobbyFuture = RxHelper.observableFuture();
-		GameLobbyVerticle gameLobbyVerticle = GameLobbyVerticle.create(EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
-		vertx.deployVerticle((Verticle) gameLobbyVerticle, deployGameLobbyFuture.toHandler());
+		/**
+		 * TODO: Now create and deploy a single instance of game lobby verticle. There will be only one lobby,
+		 * which will manage connected players and running games and put players through.
+		 *
+		 * This will be handled a litle bit differently than {@link HTTPServerVerticle}, because Lobby verticle uses new "microservice" api
+		 */
 
-		ObservableFuture<String> deployHttpServerFuture = RxHelper.observableFuture();
-		DeploymentOptions httpServerdeploymentOptions = new DeploymentOptions()
-				.setConfig(configObject)
-				.setInstances(numInstances);
-		vertx.deployVerticle(HTTPServerVerticle.class.getName(), httpServerdeploymentOptions, deployHttpServerFuture.toHandler());
 
-		deployGameLobbyFuture
-				.mergeWith(deployHttpServerFuture)
-				.subscribe(x -> {
-					//we don't care about deployment IDs
-				}, throwable -> {
-					logger.error("An error has occured while starting Pong server", throwable);
-					startFuture.fail(throwable);
-				}, () -> {
-					logger.info("Pong server successfully started");
-					startFuture.complete();
-				});
+		/**
+		 * TODO: Now wait (in a non-blocking way) until all verticles have successfully been completed, or an error occured.
+		 * Let the vert.x container know of the result, whether it should consider this app to be up and running, or failed.
+		 *
+		 *
+		 * Also log the result to the standard logger.
+		 * In case of error, use
+		 * logger.error("An error has occured while starting Pong server", throwable);
+		 *
+		 * In case of success, use
+		 * logger.info("Pong server successfully started");
+		 *
+		 * Don't forget to signal the startFuture!
+		 *
+		 */
 	}
 
 	private Integer determineHttpPort() {
