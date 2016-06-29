@@ -53,8 +53,8 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 		String privateQueueAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
 		ProxyHelper.registerService(GameVerticle.class, getVertx(), this, privateQueueAddress);
 		gameLobbyVerticle = GameLobbyVerticle.createProxy(getVertx(), StartupVerticle.EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
-		vertx.eventBus().consumer(inputAddress, createHandler(this::handleInputMessages));
 
+		vertx.eventBus().consumer(inputAddress, createHandler(this::handleInputMessages));
 		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSockJsMessages));
 	}
 
@@ -247,12 +247,6 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 		static final String QUEUE_PUBLIC_PREFIX = "Game.public-";
 		static final String QUEUE_PRIVATE_PREFIX = "Game.private-";
 		static final String QUEUE_INPUT_PREFIX = "Game.input-";
-
-		static final String CONFIG_GAME_GUID = "gameGuid";
-		static final String CONFIG_PLAYER_GUID = "playerGuid";
-		static final String CONFIG_PLAYER_NAME = "playerName";
-
-		public static final String ACTION_ADD_PLAYER = "addPlayer";
 
 		static String getPublicQueueAddressForGame(String guid) {
 			return QUEUE_PUBLIC_PREFIX + guid;
