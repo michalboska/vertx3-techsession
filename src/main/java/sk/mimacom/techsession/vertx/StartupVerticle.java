@@ -25,15 +25,7 @@ public class StartupVerticle extends AbstractVerticle {
 	public void start(Future<Void> startFuture) throws Exception {
 
 		String httpAddress = JsonParser.getString("http.address", context);
-		Integer cloudPort;
-		try {
-			cloudPort = Integer.parseInt(System.getenv("PORT"));
-			logger.info("Got HTTP port definition from cloud provider, will listen on port " + cloudPort);
-		} catch (NumberFormatException e) {
-			cloudPort = JsonParser.getInteger("http.port", context);
-			logger.info("Environment property PORT is not defined, will use http port from local config: " + cloudPort);
-		}
-		final Integer httpPort = cloudPort; //we need a final variable to use in lambda
+		final Integer httpPort = determineHttpPort();
 		Integer numInstances = Runtime.getRuntime().availableProcessors();
 		JsonArray allowedEndpointsIn = JsonParser.getArray("allowedEndpointsIn", context);
 		JsonArray allowedEndpointsOut = JsonParser.getArray("allowedEndpointsOut", context);
@@ -44,7 +36,9 @@ public class StartupVerticle extends AbstractVerticle {
 		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_IN, allowedEndpointsIn);
 		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_OUT, allowedEndpointsOut);
 
-		DeploymentOptions httpServerdeploymentOptions = new DeploymentOptions().setConfig(configObject);
+		DeploymentOptions httpServerdeploymentOptions = new DeploymentOptions()
+				.setConfig(configObject)
+				.setInstances(numInstances);
 
 		logger.info("Starting " + numInstances + " instances of Pong HTTP server at address " + httpAddress + " port:" + httpPort);
 		logger.info("Allowed bridges for inbound eventbus endpoints: " + allowedEndpointsIn.toString());
@@ -69,6 +63,18 @@ public class StartupVerticle extends AbstractVerticle {
 					logger.info("Pong server successfully started");
 					startFuture.complete();
 				});
+	}
+
+	private Integer determineHttpPort() {
+		Integer cloudPort;
+		try {
+			cloudPort = Integer.parseInt(System.getenv("PORT"));
+			logger.info("Got HTTP port definition from cloud provider, will listen on port " + cloudPort);
+		} catch (NumberFormatException e) {
+			cloudPort = JsonParser.getInteger("http.port", context);
+			logger.info("Environment property PORT is not defined, will use http port from local config: " + cloudPort);
+		}
+		return cloudPort;
 	}
 
 	public static class EventbusAddresses {
