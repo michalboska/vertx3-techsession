@@ -36,20 +36,18 @@ public class StartupVerticle extends AbstractVerticle {
 		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_IN, allowedEndpointsIn);
 		configObject.put(HTTPServerVerticle.CONFIG_ALLOWED_ENDPOINTS_OUT, allowedEndpointsOut);
 
-		DeploymentOptions httpServerdeploymentOptions = new DeploymentOptions()
-				.setConfig(configObject)
-				.setInstances(numInstances);
-
 		logger.info("Starting " + numInstances + " instances of Pong HTTP server at address " + httpAddress + " port:" + httpPort);
 		logger.info("Allowed bridges for inbound eventbus endpoints: " + allowedEndpointsIn.toString());
 		logger.info("Allowed bridges for outbound eventbus endpoints: " + allowedEndpointsOut.toString());
 
-		ObservableFuture<String> deployHttpServerFuture = RxHelper.observableFuture();
 		ObservableFuture<String> deployGameLobbyFuture = RxHelper.observableFuture();
-
 		GameLobbyVerticle gameLobbyVerticle = GameLobbyVerticle.create(EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
-
 		vertx.deployVerticle((Verticle) gameLobbyVerticle, deployGameLobbyFuture.toHandler());
+
+		ObservableFuture<String> deployHttpServerFuture = RxHelper.observableFuture();
+		DeploymentOptions httpServerdeploymentOptions = new DeploymentOptions()
+				.setConfig(configObject)
+				.setInstances(numInstances);
 		vertx.deployVerticle(HTTPServerVerticle.class.getName(), httpServerdeploymentOptions, deployHttpServerFuture.toHandler());
 
 		deployGameLobbyFuture

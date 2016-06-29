@@ -36,13 +36,15 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 	private Logger logger = LoggerFactory.getLogger(GameLobbyVerticleImpl.class);
 
 	private Map<String, Game> activeGames = new HashMap<>();
-	private Map<String, Game> activeGamesByName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 	private Map<String, Player> activePlayers = new HashMap<>();
 	private Map<String, Player> activePlayersByName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 	private Map<String, String> deploymentIDs = new HashMap<>();
 	private Game joinableGame;
 	private String privateQueueAddress;
+
+	//we don't actually need this instance in our app, but if we needed to be able to unsubscribe from this address
+	// (while keeping this verticle still alive), we would do it by calling this consumer's unregister() method
 	private MessageConsumer<JsonObject> serviceProxyConsumer;
 
 	GameLobbyVerticleImpl(String privateQueueAddress) {
@@ -51,13 +53,12 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 
 	@Override
 	public void start() throws Exception {
-		vertx.eventBus().consumer(QUEUE_LOBBY, createHandler(this::handleMessage));
 		serviceProxyConsumer = ProxyHelper.registerService(GameLobbyVerticle.class, getVertx(), this, privateQueueAddress);
-
-		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketMessage));
+		vertx.eventBus().consumer(QUEUE_LOBBY, createHandler(this::handleMessageFromPlayer));
+		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketSystemMessage));
 	}
 
-	private JsonObject handleMessage(Message<JsonObject> message) {
+	private JsonObject handleMessageFromPlayer(Message<JsonObject> message) {
 		JsonObject result = null;
 		JsonObject body = message.body();
 		switch (body.getString("type")) {
@@ -88,7 +89,7 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 		return result;
 	}
 
-	private JsonObject handleSocketMessage(Message<JsonObject> message) {
+	private JsonObject handleSocketSystemMessage(Message<JsonObject> message) {
 		JsonObject body = message.body();
 		if (body != null && "disconnect".equals(body.getString("type"))) {
 			playerDisconnected(body.getString("playerGuid"));
@@ -124,7 +125,6 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 		String guid = Entity.generateGUID();
 		Game game = new Game(escapeString(name), guid, player);
 		activeGames.put(guid, game);
-		activeGamesByName.put(name, game);
 		//deploy and configure a new game verticle
 		GameVerticle gameVerticle = GameVerticle.create(guid, playerGuid, player.getName());
 		ObservableFuture<String> deployGameVerticleFuture = RxHelper.observableFuture();
@@ -176,7 +176,6 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 	public void onGameEnded(String gameGuid) {
 		Game gameInMap = activeGames.get(gameGuid);
 		if (gameInMap != null) {
-			activeGamesByName.remove(gameInMap.getName());
 			IntStream.rangeClosed(1, 2).forEach(i -> {
 				playerDisconnected(gameInMap.getPlayer(i).getGuid());
 			});

@@ -24,7 +24,9 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 	private GameLobbyVerticle gameLobbyVerticle;
 
 	private Player[] players = new Player[2];
-	private String gameGuid, publicAddress, privateAddress, inputAddress;
+	private String gameGuid;
+	private String publicAddress;
+	private String inputAddress;
 	private Point ball = new Point(512, 300);
 	private float ballSpeed = 10;
 	private Point ballVector = new Point(-1, -1);
@@ -43,7 +45,6 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 		this.gameGuid = gameGuid;
 		players[0] = new Player(Validate.notNull(firstPlayerName), Validate.notNull(firstPlayerGuid));
 		publicAddress = Constants.getPublicQueueAddressForGame(gameGuid);
-		privateAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
 		inputAddress = Constants.getInputQueueAddressForGame(gameGuid);
 	}
 
