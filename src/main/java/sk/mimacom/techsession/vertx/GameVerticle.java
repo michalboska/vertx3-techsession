@@ -11,11 +11,13 @@ import io.vertx.core.Vertx;
 public interface GameVerticle {
 
 	static GameVerticle create(String gameGuid, String firstPlayerGuid, String firstPlayerName) {
-		return new GameVerticleImpl(gameGuid, firstPlayerGuid, firstPlayerName);
+		//TODO: Create and return a configured GameVerticle instance
+		return null;
 	}
 
 	static GameVerticle createProxy(Vertx vertx, String gameGuid) {
-		return new GameVerticleVertxEBProxy(vertx, GameVerticleImpl.Constants.getPrivateQueueAddressForGame(gameGuid));
+		//TODO: Return a Proxy using a specifig Eventbus address to send messages to. That address is calculated based on gameGuid
+		return null;
 	}
 
 	void addPlayer(String playerGuid, String playerName, Handler<AsyncResult<Void>> handler);

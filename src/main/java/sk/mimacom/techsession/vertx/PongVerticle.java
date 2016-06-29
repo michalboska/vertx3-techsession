@@ -11,21 +11,20 @@ import java.util.function.Function;
 
 abstract class PongVerticle extends AbstractVerticle {
 
-    Handler<Message<JsonObject>> createHandler(Function<Message<JsonObject>, JsonObject> handlerFunction) {
-        return msg -> {
-            JsonObject result = handlerFunction.apply(msg);
-            if (result == null) {
-                unknownHandlerError(msg);
-            } else if (!(result instanceof AsyncHandlerDTO)) {
-                msg.reply(result);
-            }
-            //else, if the result is an instance of AsyncHandlerDTO, do nothing, as the handlerFunction will handle
-            //the response itself
-        };
-    }
+	Handler<Message<JsonObject>> createHandler(Function<Message<JsonObject>, JsonObject> handlerFunction) {
 
-    private void unknownHandlerError(Message msg) {
-        msg.reply(new ErrorDTO("No handler registered for this message type"));
-    }
+		/**
+		 * TODO: This should return a function that takes a funstion of Message as an argument and:
+		 * 		- if that function returns null, return error (unknownHandlerError(...))
+		 * 		- if it returns {@link AsyncHandlerDTO} instance, do nothing, as that function will take care of replying itself
+		 * 		- otherwise send the value returned by that function as a reply to the message
+		 */
+		return msg -> {
+		};
+	}
+
+	private void unknownHandlerError(Message msg) {
+		msg.reply(new ErrorDTO("No handler registered for this message type"));
+	}
 
 }

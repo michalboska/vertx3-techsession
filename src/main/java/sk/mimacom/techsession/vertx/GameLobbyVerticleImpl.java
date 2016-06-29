@@ -53,9 +53,13 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 
 	@Override
 	public void start() throws Exception {
-		serviceProxyConsumer = ProxyHelper.registerService(GameLobbyVerticle.class, getVertx(), this, privateQueueAddress);
-		vertx.eventBus().consumer(QUEUE_LOBBY, createHandler(this::handleMessageFromPlayer));
-		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSocketSystemMessage));
+
+		/**
+		 * TODO: Subscribe to following eventbus addresses:
+		 * - configuration supplied address for private queue (use the "microservice" API for this)
+		 * - QUEUE_LOBBY for incomming requests from players (more commonly, websocket clients)
+		 * - HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES to be informed about players that disconnect
+		 */
 	}
 
 	private JsonObject handleMessageFromPlayer(Message<JsonObject> message) {
@@ -99,15 +103,15 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 
 	private JsonObject addPlayer(JsonObject message) {
 		String name = message.getString("name");
-		boolean exists = activePlayersByName.containsKey(name);
-		if (exists) {
-			return new ErrorDTO("Player name already exists");
-		}
-		Player player;
-		player = new Player(escapeString(name), Entity.generateGUID());
-		activePlayers.put(player.getGuid(), player);
-		activePlayersByName.put(player.getName(), player);
-		return new AddPlayerDTO(player.getGuid());
+
+		/**
+		 * TODO: Register a new player. Check if such player already does not exist (return an error in such case)
+		 */
+		Player player = new Player(escapeString(name), Entity.generateGUID());
+		/**
+		 * TODO: Player check succeeded, update internal state and send successful response ({@link AddPlayerDTO})
+		 */
+		return null;
 	}
 
 	private JsonObject addGame(Message<JsonObject> message) {
@@ -126,16 +130,15 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 		Game game = new Game(escapeString(name), guid, player);
 		activeGames.put(guid, game);
 		//deploy and configure a new game verticle
-		GameVerticle gameVerticle = GameVerticle.create(guid, playerGuid, player.getName());
-		ObservableFuture<String> deployGameVerticleFuture = RxHelper.observableFuture();
-		getVertx().deployVerticle((Verticle) gameVerticle, deployGameVerticleFuture.toHandler());
-		deployGameVerticleFuture.subscribe(deploymentId -> {
-			deploymentIDs.put(guid, deploymentId);
-			logger.info(String.format("Deployed a new verticle for game %s with deployment ID: %s", guid, deploymentId));
-			message.reply(new AddGameDTO(guid));
-		}, throwable -> {
-			message.reply(new ErrorDTO(throwable));
-		});
+		/**
+		 * TODO: Create an instance of the {@link GameVerticle} that will handle this particular game.
+		 * It will keep all game-related internal state, accept players' input, calculate movements and inform players about the new state
+		 */
+
+		/**
+		 * TODO: Deploy the newly created instance, wait for the deployment to succeed and inform the client
+		 * Use {@link AddGameDTO} for successful result
+		 */
 		joinableGame = game;
 		return AsyncHandlerDTO.getInstance();
 	}
@@ -158,17 +161,12 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 		game.addSecondPlayer(player);
 		//send message to existing verticle that new player has joined
 
-		ObservableFuture<Void> addPlayerToGameFuture = RxHelper.observableFuture();
-		GameVerticle gameVerticle = GameVerticle.createProxy(getVertx(), gameGuid);
-		gameVerticle.addPlayer(playerGuid, player.getName(), addPlayerToGameFuture.toHandler());
+		/**
+		 * TODO: Call the corresponding Game verticle and inform it that a new player has joined.
+		 * Use the "microservice" API. Get a proxy instance, call its method passing a {@link io.vertx.core.Handler} as an argument
+		 * Wait for that handler to complete (or fail) and signal the caller.
+		 */
 
-		addPlayerToGameFuture.subscribe((x) -> {
-		}, throwable -> {
-			message.reply(new ErrorDTO(throwable));
-		}, () -> {
-			joinableGame = null;
-			message.reply(new JoinGameDTO());
-		});
 		return AsyncHandlerDTO.getInstance();
 	}
 
@@ -181,12 +179,10 @@ class GameLobbyVerticleImpl extends PongVerticle implements GameLobbyVerticle {
 			});
 		}
 		activeGames.remove(gameGuid);
-		String id = deploymentIDs.get(gameGuid);
-		if (id != null) {
-			logger.info(String.format("Destroying verticle for game %s", gameGuid));
-			deploymentIDs.remove(gameGuid);
-			vertx.undeploy(id);
-		}
+		/**
+		 * TODO: Undeploy a game's verticle as it has already ended.
+		 * The verticle will be stopped and destroyed by the vert'x container, freeing system resources
+		 */
 	}
 
 	private JsonObject getAvailableGame() {

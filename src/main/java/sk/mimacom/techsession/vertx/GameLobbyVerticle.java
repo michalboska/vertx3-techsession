@@ -9,11 +9,14 @@ import io.vertx.core.Vertx;
 public interface GameLobbyVerticle {
 
 	static GameLobbyVerticle create(String addressToListenOn) {
-		return new GameLobbyVerticleImpl(addressToListenOn);
+
+		//TODO: create and return the verticle's instance
+		return null;
 	}
 
 	static GameLobbyVerticle createProxy(Vertx vertx, String address) {
-		return new GameLobbyVerticleVertxEBProxy(vertx, address);
+		//TODO: Return the proxy object
+		return null;
 	}
 
 	void onGameEnded(String gameGuid);
