@@ -42,16 +42,28 @@ public class HTTPServerVerticle extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		HttpServer httpServer = vertx.createHttpServer();
-		SockJSHandler sockJSHandler = SockJSHandler.create(vertx);
-		setupSockjsBridge(sockJSHandler);
 
-		Router router = Router.router(vertx);
-		router.route("/eventbus/*").handler(sockJSHandler);
-		router.routeWithRegex(HttpMethod.GET, "/(.*)").handler(this::handleHttpGet);
-		httpServer.requestHandler(router::accept);
+		//TODO: Note that we are using the start() version without the future
 
-		httpServer.listen(JsonParser.getInteger(CONFIG_PORT, context), JsonParser.getString(CONFIG_ADDRESS, context));
+		/**
+		 * TODO: Create an instance of Vert.x's HTTP server and SockJS handler.
+		 * Then call the setupSockjsBridge method to configure the EventBus <-> SockJS bridge
+		 */
+
+		/**
+		 * TODO: Now create an instance of {@link Router} object. Configure it to handle GET requests to our HTTP server
+		 *
+		 * Let the special URL pattern "/eventbus/*" be handled by the sockJS handler,
+		 * all other URLs should be handled by the handleHttpGet method.
+		 * Be sure to capture the request path in a regex group, so that we can extract the required file path later.
+		 *
+		 * Finally, set the configured router to be the http server's request handler.
+		 */
+
+		/**
+		 * TODO: Start the http server using its listen() method. Use address and port supplied by the configuration.
+		 */
+
 	}
 
 	private void setupSockjsBridge(SockJSHandler sockJSHandler) {
@@ -74,18 +86,11 @@ public class HTTPServerVerticle extends AbstractVerticle {
 	}
 
 	private void handleHttpGet(RoutingContext routingContext) {
-		String requestedPath = routingContext.pathParam("param0");
-		String filePath = StringUtils.isBlank(requestedPath) ? "www/index.html" : "www/" + requestedPath;
-		ObservableFuture<Boolean> fileExistsFuture = RxHelper.observableFuture();
-		vertx.fileSystem().exists(filePath, fileExistsFuture.toHandler());
-		HttpServerResponse response = routingContext.response();
-		fileExistsFuture.subscribe(fileExists -> {
-			if (fileExists && !filePath.contains("..")) {
-				response.sendFile(filePath);
-			} else {
-				response.sendFile(NOT_FOUND_PATH);
-			}
-		}, throwable -> response.sendFile(NOT_FOUND_PATH));
+		/**
+		 * TODO: Extract the requested file from request, fill the default one (if blank).
+		 *
+		 * Then check if the requested file exists and finally serve the file. Don't forget to check for .. path traversal
+		 */
 	}
 
 	private void handleSockJSBridgeEvent(BridgeEvent event) {
@@ -106,13 +111,13 @@ public class HTTPServerVerticle extends AbstractVerticle {
 	}
 
 	private void handleSocketClosed(SockJSSocket sock) {
-		String address = sock.remoteAddress().toString();
-		String guid = addressToPlayerGuidMap.get(address);
-		if (guid == null) {
-			//player with such remote address not found, nothing more to do
-			return;
-		}
-		vertx.eventBus().publish(TOPIC_SOCKJS_MESSAGES, new PlayerDisconnectDTO(guid));
+		/**
+		 * TODO: Get the remote address for the socket being closed. Check if we have a player registered for that socket.
+		 * If yes, broadcast the event, so that if a game including that player is running,
+		 * we let it know that this player is an ugly leaver and we should declare his opponent victorious
+		 *
+		 * Note: the topic has address: TOPIC_SOCKJS_MESSAGES
+		 */
 	}
 
 
