@@ -13,3 +13,5 @@ NOTICE: This is by no means a complete fool-proof implementation of the game. So
  - Security: Current security implementation relies on clients not knowing other players' or games' GUID. GUID is supposed to be unique, so we assume there are no collisions (this is ok), but
    if someone finds out GUID of some other player, he could influence his games and act on his behalf. In a real world, authentication/authorization/"session" mechanisms would be needed
  - and some more I can't currently think of... :o)
+
+For TechSession attendees, please fill out the feedback form here: https://goo.gl/7m55Ii 
