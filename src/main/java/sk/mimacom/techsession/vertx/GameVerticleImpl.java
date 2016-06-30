@@ -11,7 +11,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.rxjava.core.Future;
 import io.vertx.rxjava.core.eventbus.Message;
-import io.vertx.serviceproxy.ProxyHelper;
 import sk.mimacom.techsession.vertx.dto.AsyncHandlerDTO;
 import sk.mimacom.techsession.vertx.dto.game.GameCommandDTO;
 import sk.mimacom.techsession.vertx.dto.game.GameStateDTO;
@@ -50,12 +49,31 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 
 	@Override
 	public void start() {
-		String privateQueueAddress = Constants.getPrivateQueueAddressForGame(gameGuid);
-		ProxyHelper.registerService(GameVerticle.class, getVertx(), this, privateQueueAddress);
+		/**
+		 * TODO: Compute private queue address (using Constants.getPrivateQueueAddressForGame(gameGuid)) and subscribe to that address
+		 * (use microservice API as we will use the {@link GameVerticle} interface to call methods here
+		 */
+
+		/**
+		 * TODO: create a proxy to the {@link GameLobbyVerticle}. We will use this service to signal that the game has ended.
+		 * The GameLobby listens on this address StartupVerticle.EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE
+		 */
 		gameLobbyVerticle = GameLobbyVerticle.createProxy(getVertx(), StartupVerticle.EventbusAddresses.GAME_LOBBY_PRIVATE_QUEUE);
 
 		vertx.eventBus().consumer(inputAddress, createHandler(this::handleInputMessages));
 		vertx.eventBus().consumer(HTTPServerVerticle.TOPIC_SOCKJS_MESSAGES, createHandler(this::handleSockJsMessages));
+	}
+
+	@Override
+	public void addPlayer(String playerGuid, String playerName, Handler<AsyncResult<Void>> handler) {
+		Future<Void> handlerFuture = Future.<Void>future().setHandler(handler);
+		if (players[1] != null) {
+			handlerFuture.fail("Game is full");
+			return;
+		}
+		players[1] = new Player(playerName, playerGuid);
+		vertx.setTimer(2000, l -> startGame());
+		handlerFuture.complete();
 	}
 
 	private JsonObject handleInputMessages(Message<JsonObject> message) {
@@ -221,18 +239,6 @@ class GameVerticleImpl extends PongVerticle implements GameVerticle {
 		command.setCommand("start");
 		vertx.eventBus().publish(publicAddress, command);
 		gameTimer = vertx.setPeriodic(20, this::gameTick);
-	}
-
-	@Override
-	public void addPlayer(String playerGuid, String playerName, Handler<AsyncResult<Void>> handler) {
-		Future<Void> handlerFuture = Future.<Void>future().setHandler(handler);
-		if (players[1] != null) {
-			handlerFuture.fail("Game is full");
-			return;
-		}
-		players[1] = new Player(playerName, playerGuid);
-		vertx.setTimer(2000, l -> startGame());
-		handlerFuture.complete();
 	}
 
 	private void playerDisconnected(String playerGuid) {
