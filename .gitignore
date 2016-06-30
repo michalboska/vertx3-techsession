@@ -11,3 +11,5 @@ build/
 target/
 
 mods/
+.vertx/
+src/main/resources/vertx-techsession-pong-js/
